@@ -13,6 +13,8 @@ services:
       - "CASSANDRA_CLUSTER_NAME=my-cluster"
       - "CASSANDRA_SEEDS=cassandra-1"
       - "CASSANDRA_NUM_TOKENS=4"
+      - "CASSANDRA_START_RPC=true"
+      - "CASSANDRA_RPC_ADDRESS=cassandra-1"
     volumes:
       - "./cassandra-1:/var/lib/cassandra"
   cassandra-2:
@@ -28,6 +30,8 @@ services:
       - "CASSANDRA_CLUSTER_NAME=my-cluster"
       - "CASSANDRA_SEEDS=cassandra-1"
       - "CASSANDRA_NUM_TOKENS=4"
+      - "CASSANDRA_START_RPC=true"
+      - "CASSANDRA_RPC_ADDRESS=cassandra-1"
     volumes:
       - "./cassandra-2:/var/lib/cassandra"
 networks:
