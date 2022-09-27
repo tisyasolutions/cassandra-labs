@@ -15,7 +15,7 @@ services:
       - "./cassandra-1:/var/lib/casandra"
   cassandra-2:
     image: cassandra:4.0.6
-    container_name: cassandra-2
+    container_name: cassandra-2 
     hostname: cassandra-2
     networks:
       tisya-net:
