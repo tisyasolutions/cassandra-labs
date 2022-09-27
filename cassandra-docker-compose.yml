@@ -4,6 +4,8 @@ services:
     image: cassandra:4.0.6
     container_name: cassandra-1
     hostname: cassandra-1
+    ports:
+      - "9042:9042"
     networks:
       tisya-net:
         ipv4_address: 172.16.1.31
@@ -17,6 +19,8 @@ services:
     image: cassandra:4.0.6
     container_name: cassandra-2 
     hostname: cassandra-2
+    ports:
+      - "9042:9042"
     networks:
       tisya-net:
         ipv4_address: 172.16.1.32
