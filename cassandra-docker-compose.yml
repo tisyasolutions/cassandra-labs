@@ -1,0 +1,31 @@
+version: "3.3"
+services:
+  cassandra-node1:
+    image: cassandra:4.0.6
+    container_name: cassandra-node1
+    hostname: cassandra-node1
+    networks:
+      tisya-net:
+        ipv4_address: 172.16.3.1
+    environment:
+      - "CASSANDRA_CLUSTER_NAME=my-cluster"
+      - "CASSANDRA_SEEDS=cassandra-node1"
+      - "CASSANDRA_NUM_TOKENS=4"
+    volumes:
+      - "./node1:/var/lib/casandra"
+  cassandra-node2:
+    image: cassandra:4.0.6
+    container_name: cassandra-node2
+    hostname: cassandra-node2
+    networks:
+      tisya-net:
+        ipv4_address: 172.16.3.2
+    environment:
+      - "CASSANDRA_CLUSTER_NAME=my-cluster"
+      - "CASSANDRA_SEEDS=cassandra-node1"
+      - "CASSANDRA_NUM_TOKENS=4"
+    volumes:
+      - "./node2:/var/lib/casandra"
+networks:
+  tisya-net:
+    external: true
