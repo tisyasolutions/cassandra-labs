@@ -12,7 +12,7 @@ services:
       - "CASSANDRA_SEEDS=cassandra-1"
       - "CASSANDRA_NUM_TOKENS=4"
     volumes:
-      - "./cassandra-1:/var/lib/casandra"
+      - "./cassandra-1:/var/lib/cassandra"
   cassandra-2:
     image: cassandra:4.0.6
     container_name: cassandra-2 
@@ -25,7 +25,7 @@ services:
       - "CASSANDRA_SEEDS=cassandra-1"
       - "CASSANDRA_NUM_TOKENS=4"
     volumes:
-      - "./cassandra-2:/var/lib/casandra"
+      - "./cassandra-2:/var/lib/cassandra"
 networks:
   tisya-net:
     external: true
