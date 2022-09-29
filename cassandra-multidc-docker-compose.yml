@@ -1,0 +1,71 @@
+version: "3.3"
+services:
+  cassandra-in-1:
+    image: cassandra:4.0.6
+    container_name: cassandra-in-1
+    hostname: cassandra-in-1
+    ports:
+      - "7000:7000"
+    networks:
+      tisya-net:
+        ipv4_address: 172.16.1.35
+    environment:
+      - "CASSANDRA_CLUSTER_NAME=multidc-cluster"
+      - "CASSANDRA_SEEDS=cassandra-in-1"
+      - "CASSANDRA_NUM_TOKENS=4"
+      - "CASSANDRA_DC=Bengaluru"
+      - "CASSANDRA_RACK=Rack1"
+      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+    volumes:
+      - "./cassandra-in-1:/var/lib/cassandra"
+  cassandra-in-2:
+    image: cassandra:4.0.6
+    container_name: cassandra-in-2
+    hostname: cassandra-in-2
+    networks:
+      tisya-net:
+        ipv4_address: 172.16.1.36
+    environment:
+      - "CASSANDRA_CLUSTER_NAME=multidc-cluster"
+      - "CASSANDRA_SEEDS=cassandra-in-1"
+      - "CASSANDRA_NUM_TOKENS=4"
+      - "CASSANDRA_DC=Bengaluru"
+      - "CASSANDRA_RACK=Rack1"
+      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+    volumes:
+      - "./cassandra-in-2:/var/lib/cassandra"
+  cassandra-us-1:
+    image: cassandra:4.0.6
+    container_name: cassandra-us-1
+    hostname: cassandra-us-1
+    networks:
+      tisya-net:
+        ipv4_address: 172.16.1.37
+    environment:
+      - "CASSANDRA_CLUSTER_NAME=multidc-cluster"
+      - "CASSANDRA_SEEDS=cassandra-in-1"
+      - "CASSANDRA_NUM_TOKENS=4"
+      - "CASSANDRA_DC=NewYork"
+      - "CASSANDRA_RACK=Rack1"
+      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+    volumes:
+      - "./cassandra-us-1:/var/lib/cassandra"
+  cassandra-us-2:
+    image: cassandra:4.0.6
+    container_name: cassandra-us-2
+    hostname: cassandra-us-2
+    networks:
+      tisya-net:
+        ipv4_address: 172.16.1.38
+    environment:
+      - "CASSANDRA_CLUSTER_NAME=multidc-cluster"
+      - "CASSANDRA_SEEDS=cassandra-in-1"
+      - "CASSANDRA_NUM_TOKENS=4"
+      - "CASSANDRA_DC=NewYork"
+      - "CASSANDRA_RACK=Rack1"
+      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+    volumes:
+      - "./cassandra-us-2:/var/lib/cassandra"
+networks:
+  tisya-net:
+    external: true
