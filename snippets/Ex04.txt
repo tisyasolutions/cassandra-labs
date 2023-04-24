@@ -1,0 +1,236 @@
+
+1.	Create twissandra schema
+
+CREATE KEYSPACE twissandra
+WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+USE twissandra;
+
+CREATE TABLE users (
+    username text PRIMARY KEY, 
+    password text
+);
+
+CREATE TABLE following (
+    username text,
+    followed text,
+    PRIMARY KEY(username, followed)
+);
+
+CREATE TABLE followers (
+    username  text,
+    following text,
+    PRIMARY KEY(username, following)
+);
+
+CREATE TABLE tweets (
+    tweetid uuid PRIMARY KEY, 
+    username text, 
+    body text
+);
+
+CREATE TABLE userline (
+    tweetid  timeuuid,
+    username text,
+    body     text,
+    PRIMARY KEY(username, tweetid)
+);
+
+CREATE TABLE timeline (
+    username  text,
+    tweetid   timeuuid,
+    posted_by text,
+    body      text,
+    PRIMARY KEY(username, tweetid)
+);
+
+2.	Create a class com.tisya.daac.twissandra.Tweet and implement the methods for required functionality.
+
+public class Tweet implements Comparable<Tweet> {
+
+	private final UUID id;
+	private final Date postedAt;
+	private final String postedBy;
+	private final String body;
+
+	public Tweet(String postedBy, String body, UUID id, Date postedAt) {
+		this.postedBy = postedBy;
+		this.body = body;
+		this.id = id;
+		this.postedAt = postedAt;
+	}
+	public UUID getId() {
+		return id;
+	}
+	public String getPostedBy() {
+		return postedBy;
+	}
+	public String getBody() {
+		return body;
+	}
+	public Date getPostedAt() {
+		return postedAt;
+	}
+	public int compareTo(Tweet o) {
+		return this.postedAt.compareTo(o.postedAt);
+	}
+	@Override
+	public String toString() {
+		StringBuilder buf = new StringBuilder();
+		buf.append(postedBy).append(": ").append(body).append(" (")
+				.append(postedAt).append(")");
+		return buf.toString();
+	}
+}
+
+3.	Create a class com.tisya.daac.twissandra.TwissandraDao and implement the methods for required functionality.
+
+public class TwissandraDao {
+	private static final String PUBLIC_USERLINE_KEY = "!PUBLIC!";
+	private final Cluster cluster;
+	private final Session session;
+
+	public TwissandraDao(String cassandraHost, int cassandraPort,
+			String keyspaceName) {
+		cluster = Cluster.builder().withPort(cassandraPort)
+				.addContactPoint(cassandraHost).build();
+		session = cluster.connect(keyspaceName);
+	}
+
+	public String getPassword(String username) {
+		ResultSet queryResult = execute(
+				"SELECT password FROM users WHERE username = '%s'", username);
+		Row row = getOneRow(queryResult);
+		return row != null ? row.getString("password") : null;
+	}
+
+	public List<String> getFriends(String username) {
+		ResultSet queryResult = execute(
+				"SELECT followed FROM following WHERE username = '%s'",
+				username);
+		List<String> friends = new ArrayList<String>();
+
+		for (Row row : queryResult)
+			friends.add(row.getString("followed"));
+
+		return friends;
+	}
+
+	public List<String> getFollowers(String username) {
+		ResultSet queryResult = execute(
+				"SELECT following FROM followers WHERE username = '%s'",
+				username);
+		List<String> followers = new ArrayList<String>();
+
+		for (Row row : queryResult)
+			followers.add(row.getString("following"));
+
+		return followers;
+	}
+
+	public List<Tweet> getUserline(String username, Date start, int limit) {
+		ResultSet queryResult = execute(
+				"SELECT tweetid, body FROM userline WHERE username = '%s' AND tweetid < maxTimeuuid('%d') ORDER BY tweetid DESC LIMIT %d",
+				username, start.getTime(), limit);
+		List<Tweet> tweets = new ArrayList<Tweet>();
+
+		for (Row row : queryResult) {
+			UUID id = row.getUUID("tweetid");
+			tweets.add(new Tweet(username, row.getString("body"), id,
+					fromUUID1(id)));
+		}
+
+		return tweets;
+	}
+
+	public List<Tweet> getTimeline(String username, Date start, int limit) {
+		ResultSet queryResult = execute(
+				"SELECT tweetid, posted_by, body FROM timeline WHERE username = '%s' AND tweetid < maxTimeuuid('%d') ORDER BY tweetid DESC LIMIT %d",
+				username, start.getTime(), limit);
+		List<Tweet> tweets = new ArrayList<Tweet>();
+
+		for (Row row : queryResult) {
+			UUID id = row.getUUID("tweetid");
+			tweets.add(new Tweet(row.getString("posted_by"), row
+					.getString("body"), id, fromUUID1(id)));
+		}
+
+		return tweets;
+	}
+
+	public List<Tweet> getTweets(Date start, int limit) {
+		return getTimeline(PUBLIC_USERLINE_KEY, start, limit);
+	}
+
+	public Tweet getTweet(UUID id) {
+		Row row = getOneRow(execute(
+				"SELECT username, body FROM tweets WHERE tweetid = %s",
+				id.toString()));
+		return row != null ? new Tweet(row.getString("username"),
+				row.getString("body"), id, fromUUID1(id)) : null;
+	}
+
+	public void saveUser(String username, String password) {
+		execute("INSERT INTO users (username, password) VALUES ('%s', '%s')",
+				username, password);
+	}
+
+	public Tweet saveTweet(String username, String body) {
+		UUID id = UUIDs.timeBased();
+
+		execute("INSERT INTO tweets (tweetid, username, body) VALUES (%s, '%s', '%s')",
+				id.toString(), username, body);
+
+		execute("INSERT INTO userline (username, tweetid, body) VALUES ('%s', %s, '%s')",
+				username, id.toString(), body);
+
+		execute("INSERT INTO timeline (username, tweetid, posted_by, body) VALUES ('%s', %s, '%s', '%s')",
+				username, id.toString(), username, body);
+
+		execute("INSERT INTO timeline (username, tweetid, posted_by, body) VALUES ('%s', %s, '%s', '%s')",
+				PUBLIC_USERLINE_KEY, id.toString(), username, body);
+
+		for (String follower : getFollowers(username)) {
+			execute("INSERT INTO timeline (username, tweetid, posted_by, body) VALUES ('%s', %s, '%s', '%s')",
+					follower, id.toString(), username, body);
+		}
+
+		return new Tweet(username, body, id, fromUUID1(id));
+	}
+
+	public void addFriend(String username, String friend) {
+		if (username.equals(friend)) {
+			return;
+		}
+
+		execute("INSERT INTO following (username, followed) VALUES ('%s', '%s')",
+				username, friend);
+		execute("INSERT INTO followers (username, following) VALUES ('%s', '%s')",
+				friend, username);
+	}
+
+	public void removeFriend(String username, String friend) {
+		execute("DELETE FROM following WHERE username = '%s' AND followed = '%s'",
+				username, friend);
+		execute("DELETE FROM followers WHERE username = '%s' AND following = '%s'",
+				friend, username);
+	}
+
+	private Row getOneRow(ResultSet result) {
+		Row row = result.one();
+		if (!result.isExhausted())
+			throw new RuntimeException(
+					"ResultSet instance contained more than one row!");
+		return row;
+	}
+
+	private ResultSet execute(String query, Object... parms) {
+		String cql = String.format(query, parms);
+		return session.execute(cql);
+	}
+
+	private Date fromUUID1(UUID uuid) {
+		assert uuid.version() == 1;
+		return new Date((uuid.timestamp() / 10000) + -12219292800000L);
+	}
+}

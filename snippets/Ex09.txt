@@ -1,0 +1,22 @@
+INSERT INTO employees (empid, fname, lname)
+VALUES (104, 'Mike', 'Fowler');
+
+
+
+
+CREATE KEYSPACE stores WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+use stores;
+
+CREATE TABLE bookstore (
+    name text PRIMARY KEY,
+    city text
+);
+
+insert into bookstore (name, city) values ('bookstore1', 'Bengaluru');
+
+
+
+
+update bookstore set city='BLR' where name='bookstore1';
+

@@ -1,0 +1,61 @@
+1. Maven dependency
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+		</dependency>
+             <dependency>
+                <groupId>com.datastax.cassandra</groupId>
+                <artifactId>cassandra-driver-core</artifactId>
+                <version>3.0.8</version>
+             </dependency>
+	</dependencies>
+
+
+2. Create a class com.tisya.daac.cql.CqlClient.
+
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+
+public class CqlClient {
+
+	public static void main(String[] args) {
+		Cluster cluster;
+		Session session;
+		String host = "cassandra-1";
+		int port = 9042;
+
+		cluster = Cluster.builder().addContactPoint(host)
+                           .withPort(port)
+				.build();
+		session = cluster.connect("trainingdb");
+		session.execute("INSERT INTO employees (empid, fname, lname) VALUES (105, 'Richard', 'Austin')");
+
+		ResultSet results = session.execute("SELECT * FROM employees");
+		for (Row row : results) {
+			System.out.format("%s %s\n", row.getString("fname"),
+					row.getString("lname"));
+		}
+
+		session.execute("update employees set lname = 'Mark' where empid = 105");
+
+		results = session.execute("SELECT * FROM employees");
+		for (Row row : results) {
+			System.out.format("%s %s\n", row.getString("fname"),
+					row.getString("lname"));
+		}
+
+		session.execute("DELETE FROM employees WHERE empid = 105");
+
+		results = session.execute("SELECT * FROM employees");
+		for (Row row : results) {
+			System.out.format("%s %s\n", row.getString("fname"),
+					row.getString("lname"));
+		}
+		cluster.close();
+	}
+
+}

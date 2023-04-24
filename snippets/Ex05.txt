@@ -1,0 +1,325 @@
+1. Alter table and update data
+
+ALTER TABLE employees ADD emails set<text>;
+ALTER TABLE employees ADD hobbies list<text>;
+ALTER TABLE employees ADD phones map<text,int>;
+
+
+
+UPDATE employees SET emails = {'jsmith@mail.com', 'jsmith@hotmail.com'} WHERE empid = 101;
+UPDATE employees SET hobbies = ['music', 'coding'] WHERE empid = 101;
+UPDATE employees SET phones = {'home':45884485, 'work':22339494}  WHERE empid = 101;
+
+
+2. Create a class com.tisya.daac.cql.CollectionsClient
+
+public class CollectionsClient {
+
+	public static void main(String[] args) {
+		Cluster cluster;
+		Session session;
+		String host = "cassandra-1";
+		int port = 9042;
+
+		cluster = Cluster.builder().addContactPoint(host).withPort(port)
+				.build();
+		session = cluster.connect("trainingdb");
+		PreparedStatement ps = session.prepare("INSERT INTO employees (emp_id, fname, lname, emails, hobbies, phones) VALUES (?, ?, ?, ?, ?, ?);");
+		BoundStatement bs = new BoundStatement(ps);
+
+		Set<String> emails = new HashSet<>();
+		emails.add("spete@mail.com");
+		emails.add("pete@gmail.com");
+
+		List<String> hobbies = new ArrayList<>();
+		hobbies.add("Cricket");
+		hobbies.add("Music");
+		hobbies.add("Reading");
+		
+		Map<String, Integer> phones = new HashMap<>();
+		phones.put("home", 28374833);
+		phones.put("work", 26781234);
+		
+		bs.bind(110, "Sam", "Pete", emails, hobbies, phones);
+		session.execute(bs);
+
+		
+		ResultSet results = session.execute("SELECT * FROM employees");
+		for (Row row : results) {
+			System.out.format("%s %s %s %s %s\n", 
+			row.getString("fname"),
+			row.getString("lname"), row.getSet("emails", String.class),
+			row.getList("hobbies", String.class),
+			row.getMap("phones", String.class, Integer.class));
+		}		
+		cluster.close();
+	}
+}
+
+
+3. Create table 
+
+CREATE TABLE product_search_counts
+  (counter_value counter,
+  product_name varchar,
+  model varchar,
+  PRIMARY KEY (product_name, model)
+);
+
+
+
+UPDATE product_search_counts SET counter_value = counter_value + 1 WHERE product_name='Sony Mobile' AND model='xperia z1';
+SELECT * FROM product_search_counts;
+
+4. Create class com.tisya.daac.counter.ProductSearchCounter
+
+public class ProductSearchCounter {
+	public static void main(String[] args) {
+		Cluster cluster;
+		Session session;
+		String host = "cassandra-1";
+		int port = 9042;
+
+		cluster = Cluster.builder().addContactPoint(host).withPort(port)
+				.build();
+		session = cluster.connect("trainingdb");
+
+
+		countProduct(session, "Vivo Mobile", "vivo T1");
+		countProduct(session, "Apple Mobile", "iPhone12");
+		countProduct(session, "Samsung Mobile", "Galaxy S20");
+		countProduct(session, "Apple Mobile", "iPhone12");
+		countProduct(session, "Vivo Mobile", "vivo T1");
+		countProduct(session, "Apple Mobile", "iPhone12");
+		countProduct(session, "Samsung Mobile", "Galaxy S20");
+		countProduct(session, "Apple Mobile", "iPhone12");
+
+		ResultSet results = session
+				.execute("SELECT * FROM product_view_counts");
+		for (Row row : results) {
+			System.out.format("%s %s %d\n", row.getString("product_name"),
+					row.getString("model"), row.getLong("counter_value"));
+		}
+
+		cluster.close();
+	}
+
+	private static void countProduct(Session session, String productName,
+			String model) {
+		Statement update = QueryBuilder
+				.update("trainingdb", "product_search_counts")
+				.with(QueryBuilder.incr("counter_value", 1l))
+				.where(QueryBuilder.eq("product_name", productName))
+				.and(QueryBuilder.eq("model", model));
+		session.execute(update);
+
+	}
+	
+}
+
+
+
+
+5. Create table
+
+use trainingdb;
+
+CREATE TABLE user_passwords (
+ user_name text,
+ password text,
+PRIMARY KEY (user_name)
+);
+
+
+6. Create class com.tisya.daac.ttl.UserPasswordExpiry 
+
+public class UserPasswordExpiry {
+	public static void main(String[] args) throws Exception {
+		Cluster cluster;
+		Session session;
+		String host = "cassandra-1";
+		int port = 9042;
+
+		cluster = Cluster.builder().addContactPoint(host).withPort(port)
+				.build();
+		session = cluster.connect("trainingdb");
+
+		Statement insert = QueryBuilder
+				.insertInto("trainingdb", "user_passwords")
+				.value("user_name", "john")
+				.value("password", "pwd123")
+				.using(QueryBuilder.ttl(30));
+		
+		session.execute(insert);
+
+		insert = QueryBuilder
+				.insertInto("trainingdb", "user_passwords")
+				.value("user_name", "smith")
+				.value("password", "pwd123")
+				.using(QueryBuilder.ttl(60));
+		session.execute(insert);
+
+		ResultSet results = session
+				.execute("SELECT * FROM user_passwords");
+		for (Row row : results) {
+			System.out.format("%s %s\n", row.getString("user_name"),
+					row.getString("password"));
+		}
+		
+		System.out.println("Waiting for TTL...");
+		Thread.sleep(31000);
+
+		results = session
+				.execute("SELECT * FROM user_passwords");
+		for (Row row : results) {
+			System.out.format("%s %s\n", row.getString("user_name"),
+					row.getString("password"));
+		}
+		
+		cluster.close();
+	}
+
+	
+}
+
+
+
+7. Create table and add data
+
+CREATE TABLE temperature (
+   weatherstation_id text,
+   event_time timestamp,
+   temperature text,
+   PRIMARY KEY (weatherstation_id, event_time)
+);
+
+
+
+INSERT INTO temperature(weatherstation_id,event_time,temperature) 
+VALUES ('1234ABCD','2022-09-03 07:01:00','72F');
+
+INSERT INTO temperature(weatherstation_id,event_time,temperature) 
+VALUES ('1234ABCD','2022-09-03 07:02:00','73F');
+
+INSERT INTO temperature(weatherstation_id,event_time,temperature) 
+VALUES ('1234ABCD','2022-09-03 07:03:00','73F');
+
+INSERT INTO temperature(weatherstation_id,event_time,temperature) 
+VALUES ('1234ABCD','2022-09-03 07:04:00','74F');
+
+INSERT INTO temperature(weatherstation_id,event_time,temperature) 
+VALUES ('4567PQRS','2022-09-03 07:01:00','72F');
+
+INSERT INTO temperature(weatherstation_id,event_time,temperature) 
+VALUES ('4567PQRS','2022-09-03 07:02:00','73F');
+
+INSERT INTO temperature(weatherstation_id,event_time,temperature) 
+VALUES ('4567PQRS','2022-09-03 07:03:00','73F');
+
+INSERT INTO temperature(weatherstation_id,event_time,temperature) 
+VALUES ('4567PQRS','2022-09-03 07:04:00','74F');
+
+
+
+
+SELECT event_time,temperature
+FROM temperature 
+WHERE weatherstation_id='1234ABCD';
+
+
+
+SELECT temperature 
+FROM temperature 
+WHERE weatherstation_id='4567PQRS'
+AND event_time > '2022-09-03 07:01:00'
+AND event_time < '2022-09-03 07:04:00';
+
+
+
+
+
+CREATE TABLE temperature_by_day (
+   weatherstation_id text,
+   date text,
+   event_time timestamp,
+   temperature text,
+   PRIMARY KEY ((weatherstation_id,date),event_time)
+);
+
+
+
+
+INSERT INTO temperature_by_day(weatherstation_id,date,event_time,temperature) 
+VALUES ('1234ABCD','2022-09-03','2022-09-03 07:01:00','72F');
+
+INSERT INTO temperature_by_day(weatherstation_id,date,event_time,temperature) 
+VALUES ('1234ABCD','2022-09-03','2022-09-03 07:02:00','73F');
+
+INSERT INTO temperature_by_day(weatherstation_id,date,event_time,temperature) 
+VALUES ('1234ABCD','2022-09-04','2022-09-04 07:01:00','73F');
+
+INSERT INTO temperature_by_day(weatherstation_id,date,event_time,temperature) 
+VALUES ('1234ABCD','2022-09-04','2022-09-04 07:02:00','74F');
+
+INSERT INTO temperature_by_day(weatherstation_id,date,event_time,temperature) 
+VALUES ('4567PQRS','2022-09-03','2022-09-03 07:01:00','72F');
+
+INSERT INTO temperature_by_day(weatherstation_id,date,event_time,temperature) 
+VALUES ('4567PQRS','2022-09-03','2022-09-03 07:02:00','73F');
+
+INSERT INTO temperature_by_day(weatherstation_id,date,event_time,temperature) 
+VALUES ('4567PQRS','2022-09-04','2022-09-04 07:01:00','73F');
+
+INSERT INTO temperature_by_day(weatherstation_id,date,event_time,temperature) 
+VALUES ('4567PQRS','2022-09-04','2022-09-04 07:02:00','74F');
+
+
+
+
+SELECT * 
+FROM temperature_by_day 
+WHERE weatherstation_id='1234ABCD' 
+AND date='2022-09-03';
+
+
+
+
+CREATE TABLE web_traffic_monitor (
+	url text, logtime timestamp, ip_address text, country text,
+	PRIMARY KEY(url, logtime, ip_address)
+);
+
+
+
+INSERT INTO web_traffic_monitor(url,logtime,ip_address,country)
+VALUES('/home','2022-09-03 07:01:00','192.168.43.12','IN');
+
+INSERT INTO web_traffic_monitor(url,logtime,ip_address,country)
+VALUES('/login','2022-09-03 07:01:10','10.16.143.121','US');
+
+INSERT INTO web_traffic_monitor(url,logtime,ip_address,country)
+VALUES('/products','2022-09-03 07:01:15','192.168.43.23','IN');
+
+INSERT INTO web_traffic_monitor(url,logtime,ip_address,country)
+VALUES('/login','2022-09-03 07:01:20','192.168.43.29','IN');
+
+INSERT INTO web_traffic_monitor(url,logtime,ip_address,country)
+VALUES('/home','2022-09-03 07:01:25','192.168.43.129','IN');
+
+INSERT INTO web_traffic_monitor(url,logtime,ip_address,country)
+VALUES('/logout','2022-09-03 07:01:37','192.168.143.157','IN');
+
+INSERT INTO web_traffic_monitor(url,logtime,ip_address,country)
+VALUES('/home','2022-09-03 07:02:00','192.168.143.104','IN');
+
+
+
+SELECT * FROM web_traffic_monitor 
+WHERE url='/home';
+
+
+SELECT * FROM web_traffic_monitor 
+WHERE url='/login' 
+AND logtime >='2022-09-01' 
+AND logtime <='2022-09-05' 
+ORDER BY logtime desc;

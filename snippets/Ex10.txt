@@ -1,0 +1,64 @@
+CREATE TABLE users (
+    user_id int PRIMARY KEY,
+    name text,
+    email text
+);
+
+
+
+CREATE TABLE movies (
+    movie_id int PRIMARY KEY,
+    title text,
+    description text
+);
+
+
+CREATE TABLE movie_ratings (
+    movie_id  int,
+    rating int,
+    user_id int,
+    title text,
+    PRIMARY KEY (movie_id, rating)
+);
+
+
+CREATE MATERIALIZED VIEW ratings_by_user
+AS SELECT user_id, movie_id, rating, title
+FROM movie_ratings
+WHERE user_id IS NOT NULL AND movie_id IS NOT NULL AND rating IS NOT NULL
+PRIMARY KEY (user_id, movie_id, rating);
+
+
+CREATE MATERIALIZED VIEW movies_by_rating
+AS SELECT rating, movie_id, title
+FROM movie_ratings
+WHERE rating IS NOT NULL AND movie_id IS NOT NULL
+PRIMARY KEY (rating, movie_id);
+
+INSERT INTO users (user_id, name, email) VALUES (101, 'John', 'john@mail.com');
+INSERT INTO users (user_id, name, email) VALUES (102, 'Raj', 'raj@mail.com');
+
+INSERT INTO movies (movie_id, title, description) VALUES (101, 'Housefull', 'Housefull the movie');
+INSERT INTO movies (movie_id, title, description) VALUES (102, 'Housefull-2', 'Housefull-2 the movie');
+INSERT INTO movies (movie_id, title, description) VALUES (103, 'Housefull-3', 'Housefull-3 the movie');
+
+
+
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (101, 101, 5, 'Housefull');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (101, 102, 3, 'Housefull');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (101, 101, 4, 'Housefull');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (101, 102, 5, 'Housefull');
+
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (102, 101, 3, 'Housefull-2');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (102, 102, 3, 'Housefull-2');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (102, 101, 3, 'Housefull-2');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (102, 102, 5, 'Housefull-2');
+
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (103, 101, 4, 'Housefull-3');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (103, 102, 4, 'Housefull-3');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (103, 101, 5, 'Housefull-3');
+INSERT INTO movie_ratings (movie_id, user_id, rating, title) VALUES (103, 102, 2, 'Housefull-3');
+
+select * from ratings_by_user where user_id=101;
+
+select * from movies_by_rating where rating IN (3, 4, 5);

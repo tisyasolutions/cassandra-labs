@@ -1,0 +1,22 @@
+$ docker stop cassandra-1 cassandra-2
+
+$ sudo service iptables stop
+
+$ docker-compose -f cassandra-multidc-docker-compose.yml up -d
+
+$ docker exec -it cassandra-3 bash
+
+
+# nodetool status
+
+
+CREATE KEYSPACE trainingdb WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+
+
+$ docker stop cassandra-4
+
+$ docker start cassandra-4
+
+ALTER KEYSPACE trainingdb WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'Bengaluru' : 1, 'NewYork' : 1 };
+
+

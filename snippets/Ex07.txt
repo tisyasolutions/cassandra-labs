@@ -1,0 +1,37 @@
+SELECT * FROM employees WHERE fname='john';
+
+CREATE INDEX employees_fname on employees(fname);
+
+ALTER TABLE employees ADD city text;
+select * from employees;
+
+
+update employees set city = 'Chennai' where empid=101;
+update employees set city = 'Bengaluru' where empid=102;
+update employees set city = 'Bengaluru' where empid=103;
+
+
+select * from employees where city = 'Bengaluru';
+
+SELECT * FROM employees WHERE fname='john';
+
+CREATE MATERIALIZED VIEW emp_by_city
+AS SELECT city, lname, fname
+FROM employees
+WHERE city IS NOT NULL AND empid IS NOT NULL
+PRIMARY KEY (city, empid);
+
+
+select * from emp_by_city where city = 'Bengaluru';
+select * from emp_by_city where city = 'Chennai';
+
+
+update employees set city = 'Chennai' where empid=102;
+select * from emp_by_city where city = 'Chennai';
+
+
+INSERT INTO employees (empid, fname, lname, city) VALUES (110, 'Ram', 'Kumar', 'Chennai');
+
+
+
+
